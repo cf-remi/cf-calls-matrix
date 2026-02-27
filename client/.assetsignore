@@ -1,0 +1,6 @@
+.git
+*.map
+config.sample.json
+wrangler.toml
+worker.js
+build.sh

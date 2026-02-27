@@ -1,0 +1,31 @@
+{
+    "default_server_config": {
+        "m.homeserver": {
+            "base_url": "https://{{SERVER_NAME}}",
+            "server_name": "{{SERVER_NAME}}"
+        }
+    },
+    "disable_custom_urls": false,
+    "disable_guests": true,
+    "disable_login_language_selector": true,
+    "disable_3pid_login": false,
+    "brand": "{{BRAND}}",
+    "default_theme": "dark",
+    "default_federate": true,
+    "show_labs_settings": false,
+    "room_directory": {
+        "servers": ["{{SERVER_NAME}}"]
+    },
+    "element_call": {
+        "url": "https://call.element.io",
+        "brand": "Element Call",
+        "use_exclusively": false
+    },
+    "setting_defaults": {
+        "breadcrumbs": true,
+        "Notifications.alwaysShowBadgeCounts": true
+    },
+    "features": {
+        "feature_sliding_sync": true
+    }
+}

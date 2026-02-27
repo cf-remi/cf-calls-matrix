@@ -1,0 +1,12 @@
+name = "{{WORKER_NAME}}-element"
+compatibility_date = "2026-02-27"
+main = "worker.js"
+account_id = "{{ACCOUNT_ID}}"
+
+[assets]
+directory = "."
+not_found_handling = "single-page-application"
+
+[[routes]]
+pattern = "{{CLIENT_DOMAIN}}"
+custom_domain = true

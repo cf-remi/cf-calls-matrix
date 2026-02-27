@@ -1,0 +1,48 @@
+diff --git a/src/hooks/room/useRoomCall.tsx b/src/hooks/room/useRoomCall.tsx
+index 5d7784e..cc8ec95 100644
+--- a/src/hooks/room/useRoomCall.tsx
++++ b/src/hooks/room/useRoomCall.tsx
+@@ -276,6 +276,19 @@ export const useRoomCall = (
+     const videoCallClick = useCallback(
+         (evt: React.MouseEvent | undefined, callPlatformType: PlatformCallType): void => {
+             evt?.stopPropagation();
++            // If an Element Call group call already exists in this room, toggle the call
++            // view rather than placing a new call. This makes the video icon act as a
++            // show/hide toggle: if the call view is open, minimize it; if it's closed,
++            // bring it back up.
++            if (hasGroupCall && groupCall && WidgetType.CALL.matches(groupCall.widget.type)) {
++                defaultDispatcher.dispatch<ViewRoomPayload>({
++                    action: Action.ViewRoom,
++                    room_id: room.roomId,
++                    metricsTrigger: undefined,
++                    view_call: !isViewingCall,
++                });
++                return;
++            }
+             if (widget && promptPinWidget) {
+                 WidgetLayoutStore.instance.moveToContainer(room, widget, Container.Top);
+             } else {
+@@ -284,7 +297,7 @@ export const useRoomCall = (
+                 placeCall(room, CallType.Video, callPlatformType, evt?.shiftKey || undefined, false);
+             }
+         },
+-        [widget, promptPinWidget, room],
++        [widget, promptPinWidget, room, hasGroupCall, groupCall, isViewingCall],
+     );
+ 
+     let voiceCallDisabledReason: string | null;
+diff --git a/src/models/Call.ts b/src/models/Call.ts
+index cb9041b..5acf210 100644
+--- a/src/models/Call.ts
++++ b/src/models/Call.ts
+@@ -1038,6 +1038,10 @@ export class ElementCall extends Call {
+         ev.preventDefault();
+         this.widgetApi!.transport.reply(ev.detail, {}); // ack
+         this.setDisconnected();
++        // Close the call view for non-video rooms so the UI returns to the timeline
++        // rather than showing the Element Call widget's internal post-hangup screen.
++        // Matches JitsiCall.onHangup behavior.
++        if (!isVideoRoom(this.room)) this.close();
+     };
+ 
+     private readonly onClose = async (ev: CustomEvent<IWidgetApiRequest>): Promise<void> => {

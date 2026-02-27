@@ -1,0 +1,55 @@
+name: Deploy Client
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'client/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build and deploy Element Web client to Cloudflare Workers
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-element-web-v1.12.11-${{ hashFiles('client/patches/*.patch') }}
+          restore-keys: |
+            pnpm-element-web-v1.12.11-
+
+      - name: Write client/config.json
+        # CLIENT_CONFIG_JSON secret is the base64-encoded contents of client/config.json.
+        # Generate locally: base64 -i client/config.json | tr -d '\n'
+        run: echo "${{ secrets.CLIENT_CONFIG_JSON }}" | base64 -d > client/config.json
+
+      - name: Write client/wrangler.toml
+        # CLIENT_WRANGLER_TOML secret is the base64-encoded contents of client/wrangler.toml.
+        # Generate locally: base64 -i client/wrangler.toml | tr -d '\n'
+        run: echo "${{ secrets.CLIENT_WRANGLER_TOML }}" | base64 -d > client/wrangler.toml
+
+      - name: Build Element Web
+        run: bash client/build.sh
+
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: client/dist
