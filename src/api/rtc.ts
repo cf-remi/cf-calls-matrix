@@ -10,7 +10,6 @@
 
 import { Hono } from 'hono';
 import type { AppEnv } from '../types';
-import { requireAuth } from '../middleware/auth';
 import { getRtkConfig, getOrCreateMeeting, addParticipant, RtkMeetingExpiredError } from '../services/rtk';
 
 const app = new Hono<AppEnv>();
