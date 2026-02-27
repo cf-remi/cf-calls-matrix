@@ -6,11 +6,11 @@
 
 A self-hostable Matrix homeserver + Element Web client that runs entirely on **Cloudflare Workers** — no VPS, no containers, no infrastructure to manage.
 
-- **Matrix server** — spec v1.17, runs on Workers + D1 + KV + R2 + Durable Objects
+- **Matrix server** — Matrix spec v1.12+, runs on Workers + D1 + KV + R2 + Durable Objects
 - **Element Web client** — patched v1.12.11, deployed as a Worker with Static Assets
 - **One command setup** — `./setup.sh` provisions all Cloudflare resources and deploys both
 
-**Live demo:** `matrix.goodshab.com` (server) · `goodshab.com` (client)
+**Example deployment:** [goodshab.com](https://goodshab.com) (client) · [matrix.goodshab.com](https://matrix.goodshab.com) (server)
 
 ---
 
@@ -47,30 +47,36 @@ The setup script will:
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           Cloudflare Edge Network                           │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  yourdomain.com                    matrix.yourdomain.com                    │
-│  ┌──────────────────────┐          ┌──────────────────────────────────────┐ │
-│  │   Element Web        │          │   Matrix Server Worker (Hono)        │ │
-│  │   Worker + Static    │          │                                      │ │
-│  │   Assets             │  HTTPS   │  ┌──────────┐  ┌──────────────────┐ │ │
-│  │                      │◄────────►│  │ Durable  │  │  D1 (SQLite)     │ │ │
-│  │  • SPA routing       │          │  │ Objects  │  │  users/rooms/    │ │ │
-│  │  • Static files      │          │  │ Room/Sync│  │  events/keys     │ │ │
-│  │  • config.json       │          │  │ /Fed/Keys│  └──────────────────┘ │ │
-│  └──────────────────────┘          │  └──────────┘                        │ │
-│                                    │  ┌──────────┐  ┌──────────────────┐ │ │
-│                                    │  │ KV (×6)  │  │  R2 (media)      │ │ │
-│                                    │  │ sessions │  │  images/files    │ │ │
-│                                    │  │ keys/cache│  │  avatars         │ │ │
-│                                    │  └──────────┘  └──────────────────┘ │ │
-│                                    │  ┌─────────────────────────────────┐ │ │
-│                                    │  │ Workflows (durable execution)   │ │ │
-│                                    │  │ RoomJoin · PushNotification     │ │ │
-│                                    │  └─────────────────────────────────┘ │ │
-│                                    └──────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────────────┘
+                          ┌─────────────────┐
+                          │     Browser     │
+                          └────────┬────────┘
+                   serves SPA      │      Matrix API calls
+                    ┌──────────────┴──────────────┐
+                    ▼                             ▼
+┌───────────────────────────────────────────────────────────────────────────┐
+│                         Cloudflare Edge Network                           │
+├───────────────────────────────────────────────────────────────────────────┤
+│  yourdomain.com                  matrix.yourdomain.com                    │
+│  ┌────────────────────��          ┌────────────────────────────────────┐   │
+│  │  Element Web       │          │  Matrix Server Worker (Hono)       │   │
+│  │  Worker + Static   │          │                                    │   │
+│  │  Assets            │          │  ┌──────────┐  ┌────────────────┐ │   │
+│  │                    │          │  │ Durable  │  │  D1 (SQLite)   │ │   │
+│  │  • SPA routing     │          │  │ Objects  │  │  users/rooms/  │ │   │
+│  │  • Static files    │          │  │ Room/Sync│  │  events/keys   │ │   │
+│  │  • config.json     │          │  │ /Fed/Keys│  └────────────────┘ │   │
+│  └────────────────────┘          │  └──────────┘                     │   │
+│                                  │  ┌──────────┐  ┌────────────────┐ │   │
+│                                  │  │ KV (×6)  │  │  R2 (media)    │ │   │
+│                                  │  │ sessions │  │  images/files  │ │   │
+│                                  │  │ keys/cache  │  avatars       │ │   │
+│                                  │  └──────────┘  └────────────────┘ │   │
+│                                  │  ┌───────────────────────────────┐ │   │
+│                                  │  │ Workflows (durable execution) │ │   │
+│                                  │  │ RoomJoin · PushNotification   │ │   │
+│                                  │  └───────────────────────────────┘ │   │
+│                                  └────────────────────────────────────┘   │
+└───────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -83,7 +89,7 @@ The setup script will:
 - Sliding Sync (MSC3575/MSC4186) for Element X / fast clients
 - Federation with standard Matrix servers
 - Media upload/download with R2 storage (MSC3916 authenticated media)
-- Push notifications (APNs direct, FCM via gateway)
+- Push notifications (APNs direct for iOS)
 - Video calling: Cloudflare Calls SFU + LiveKit MatrixRTC
 - OIDC / OAuth 2.0 login (MSC3861)
 - Admin dashboard at `/admin`
@@ -99,18 +105,18 @@ The setup script will:
 
 ## Spec Compliance
 
-**[Matrix Specification v1.17](https://spec.matrix.org/v1.17/)**
+**[Matrix Specification](https://spec.matrix.org/latest/)** — advertises v1.12, implements endpoints through v1.12 and selected MSCs
 
 | Spec Section | Implementation |
 |---|---|
-| [Client-Server API](https://spec.matrix.org/v1.17/client-server-api/) | `src/api/` — Auth, sync, rooms, messaging, profiles |
-| [Server-Server API](https://spec.matrix.org/v1.17/server-server-api/) | `src/api/federation.ts` |
-| [End-to-End Encryption](https://spec.matrix.org/v1.17/client-server-api/#end-to-end-encryption) | `src/api/keys.ts`, `src/api/key-backups.ts` |
-| [OAuth 2.0 / OIDC](https://spec.matrix.org/v1.17/client-server-api/#oauth-20-api) | `src/api/oauth.ts`, `src/api/oidc-auth.ts` (MSC3861) |
+| [Client-Server API](https://spec.matrix.org/latest/client-server-api/) | `src/api/` — Auth, sync, rooms, messaging, profiles |
+| [Server-Server API](https://spec.matrix.org/latest/server-server-api/) | `src/api/federation.ts` |
+| [End-to-End Encryption](https://spec.matrix.org/latest/client-server-api/#end-to-end-encryption) | `src/api/keys.ts`, `src/api/key-backups.ts` |
+| [OAuth 2.0 / OIDC](https://spec.matrix.org/latest/client-server-api/#oauth-20-api) | `src/api/oauth.ts`, `src/api/oidc-auth.ts` (MSC3861) |
 | [Sliding Sync](https://github.com/matrix-org/matrix-spec-proposals/pull/3575) | `src/api/sliding-sync.ts` (MSC3575, MSC4186) |
 | [Authenticated Media](https://github.com/matrix-org/matrix-spec-proposals/pull/3916) | `src/api/media.ts` (MSC3916) |
-| [Push Notifications](https://spec.matrix.org/v1.17/client-server-api/#push-notifications) | `src/api/push.ts`, `src/workflows/` |
-| [VoIP / MatrixRTC](https://spec.matrix.org/v1.17/client-server-api/#voice-over-ip) | `src/api/voip.ts`, `src/api/calls.ts` |
+| [Push Notifications](https://spec.matrix.org/latest/client-server-api/#push-notifications) | `src/api/push.ts`, `src/workflows/` — APNs (iOS) |
+| [VoIP / MatrixRTC](https://spec.matrix.org/latest/client-server-api/#voice-over-ip) | `src/api/voip.ts`, `src/api/calls.ts` |
 
 ---
 
