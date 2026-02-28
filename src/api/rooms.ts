@@ -816,6 +816,16 @@ app.put('/_matrix/client/v3/rooms/:roomId/state/:eventType/:stateKey?', requireA
 
   await storeEvent(c.env.DB, event);
 
+  // Debug logging for encryption state events
+  if (eventType === 'm.room.encryption') {
+    console.log('[encryption] PUT state event received', {
+      roomId,
+      userId,
+      eventId,
+      content,
+    });
+  }
+
   // Invalidate room metadata cache if this is a metadata-affecting state event
   const CACHED_STATE_TYPES = ['m.room.name', 'm.room.avatar', 'm.room.topic', 'm.room.canonical_alias', 'm.room.member'];
   if (CACHED_STATE_TYPES.includes(eventType)) {

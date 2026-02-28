@@ -58,7 +58,7 @@ index 750ab37..11a1b02 100644
 +    }
 +}
 diff --git a/res/css/structures/_MatrixChat.pcss b/res/css/structures/_MatrixChat.pcss
-index 284c411..7c85e5f 100644
+index 284c411..4e2c10a 100644
 --- a/res/css/structures/_MatrixChat.pcss
 +++ b/res/css/structures/_MatrixChat.pcss
 @@ -6,6 +6,13 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
@@ -75,7 +75,7 @@ index 284c411..7c85e5f 100644
  .mx_MatrixChat_splash {
      position: relative;
      height: 100%;
-@@ -49,6 +56,118 @@ Please see LICENSE files in the repository root for full details.
+@@ -49,6 +56,107 @@ Please see LICENSE files in the repository root for full details.
      height: 100%;
  }
  
@@ -171,21 +171,10 @@ index 284c411..7c85e5f 100644
 +        -webkit-overflow-scrolling: touch;
 +    }
 +
-+    /* Remove hover and focus-within highlight from room tiles on mobile.
-+     * On touch screens these states trigger on the first tap, making it look
-+     * like a "double tap to select" interaction. The tile navigates on touchend
-+     * so no intermediate highlight is needed. */
-+    .mx_RoomTile:focus-within,
-+    .mx_RoomTile:hover {
-+        background-color: transparent !important;
-+        border-radius: 0 !important;
-+    }
-+
-+    /* Suppress all focus outlines and rings on mobile — touch users don't
-+     * need keyboard focus indicators, and the ring flash causes the
-+     * "highlight then navigate" double-step feeling. */
-+    *:focus,
-+    *:focus-visible {
++    /* On mobile (touch-only devices), hide focus outlines that appear on tap.
++     * :focus-visible correctly targets keyboard focus only; :focus without
++     * :focus-visible catches mouse/touch-triggered focus that needs no ring. */
++    *:focus:not(:focus-visible) {
 +        outline: none !important;
 +        box-shadow: none !important;
 +    }
@@ -358,6 +347,28 @@ index a42811f..8dcd1c2 100644
 +        display: none;
 +    }
 +}
+diff --git a/res/css/views/rooms/_RoomTile.pcss b/res/css/views/rooms/_RoomTile.pcss
+index babb70a..8fd0154 100644
+--- a/res/css/views/rooms/_RoomTile.pcss
++++ b/res/css/views/rooms/_RoomTile.pcss
+@@ -20,7 +20,7 @@ Please see LICENSE files in the repository root for full details.
+ 
+     &.mx_RoomTile_selected,
+     &:hover,
+-    &:focus-within,
++    &:focus-visible,
+     &.mx_RoomTile_hasMenuOpen {
+         background-color: $panel-actions;
+         border-radius: 8px;
+@@ -129,7 +129,7 @@ Please see LICENSE files in the repository root for full details.
+ 
+     &:not(.mx_RoomTile_minimized, .mx_RoomTile_sticky) {
+         &:hover,
+-        &:focus-within,
++        &:focus-visible,
+         &.mx_RoomTile_hasMenuOpen {
+             /* Hide the badge container on hover because it'll be a menu button */
+             .mx_RoomTile_badgeContainer {
 diff --git a/res/manifest.json b/res/manifest.json
 index 75eeab7..cb76eec 100644
 --- a/res/manifest.json
@@ -435,52 +446,6 @@ index 4831f9e..33cc706 100644
      }
  
      private viewSomethingBehindModal(): void {
-diff --git a/src/components/views/elements/AccessibleButton.tsx b/src/components/views/elements/AccessibleButton.tsx
-index a2018b2..13734f9 100644
---- a/src/components/views/elements/AccessibleButton.tsx
-+++ b/src/components/views/elements/AccessibleButton.tsx
-@@ -152,6 +152,41 @@ const AccessibleButton = function AccessibleButton<T extends ElementType = typeo
-         } else {
-             newProps.onClick = onClick ?? undefined;
-         }
-+
-+        // Fast-tap on mobile: fire onClick immediately on touchend rather than
-+        // waiting for the browser's synthesized click (~100-300ms later).
-+        // We track touchstart position to distinguish taps from scrolls (>10px movement).
-+        let touchStartX = 0;
-+        let touchStartY = 0;
-+        newProps.onTouchStart = (e: React.TouchEvent) => {
-+            if (e.touches.length === 1) {
-+                touchStartX = e.touches[0].clientX;
-+                touchStartY = e.touches[0].clientY;
-+            }
-+        };
-+        newProps.onTouchEnd = (e: React.TouchEvent) => {
-+            if (e.changedTouches.length === 1) {
-+                const dx = e.changedTouches[0].clientX - touchStartX;
-+                const dy = e.changedTouches[0].clientY - touchStartY;
-+                if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
-+                    e.preventDefault(); // suppress the delayed synthesized click
-+                    // Blur the element immediately so focus styles don't linger
-+                    // after the tap — prevents the "highlight then navigate" flash.
-+                    (e.currentTarget as HTMLElement).blur();
-+                    onClick?.(e as unknown as ButtonEvent);
-+                }
-+            }
-+        };
-+        newProps.onTouchEnd = (e: React.TouchEvent) => {
-+            if (e.changedTouches.length === 1) {
-+                const dx = e.changedTouches[0].clientX - touchStartX;
-+                const dy = e.changedTouches[0].clientY - touchStartY;
-+                if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
-+                    e.preventDefault(); // suppress the delayed synthesized click
-+                    onClick?.(e as unknown as ButtonEvent);
-+                }
-+            }
-+        };
-         // We need to consume enter onKeyDown and space onKeyUp
-         // otherwise we are risking also activating other keyboard focusable elements
-         // that might receive focus as a result of the AccessibleButtonClick action
 diff --git a/src/components/views/rooms/RoomHeader/RoomHeader.tsx b/src/components/views/rooms/RoomHeader/RoomHeader.tsx
 index b6c0086..416f71c 100644
 --- a/src/components/views/rooms/RoomHeader/RoomHeader.tsx
