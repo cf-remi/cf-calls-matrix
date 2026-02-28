@@ -58,7 +58,7 @@ index 750ab37..11a1b02 100644
 +    }
 +}
 diff --git a/res/css/structures/_MatrixChat.pcss b/res/css/structures/_MatrixChat.pcss
-index 284c411..2af4cc1 100644
+index 284c411..7c85e5f 100644
 --- a/res/css/structures/_MatrixChat.pcss
 +++ b/res/css/structures/_MatrixChat.pcss
 @@ -6,6 +6,13 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
@@ -75,7 +75,7 @@ index 284c411..2af4cc1 100644
  .mx_MatrixChat_splash {
      position: relative;
      height: 100%;
-@@ -49,6 +56,99 @@ Please see LICENSE files in the repository root for full details.
+@@ -49,6 +56,118 @@ Please see LICENSE files in the repository root for full details.
      height: 100%;
  }
  
@@ -169,6 +169,25 @@ index 284c411..2af4cc1 100644
 +    .mx_RightPanel,
 +    .mx_BaseCard {
 +        -webkit-overflow-scrolling: touch;
++    }
++
++    /* Remove hover and focus-within highlight from room tiles on mobile.
++     * On touch screens these states trigger on the first tap, making it look
++     * like a "double tap to select" interaction. The tile navigates on touchend
++     * so no intermediate highlight is needed. */
++    .mx_RoomTile:focus-within,
++    .mx_RoomTile:hover {
++        background-color: transparent !important;
++        border-radius: 0 !important;
++    }
++
++    /* Suppress all focus outlines and rings on mobile — touch users don't
++     * need keyboard focus indicators, and the ring flash causes the
++     * "highlight then navigate" double-step feeling. */
++    *:focus,
++    *:focus-visible {
++        outline: none !important;
++        box-shadow: none !important;
 +    }
 +}
 +
@@ -417,23 +436,36 @@ index 4831f9e..33cc706 100644
  
      private viewSomethingBehindModal(): void {
 diff --git a/src/components/views/elements/AccessibleButton.tsx b/src/components/views/elements/AccessibleButton.tsx
-index a2018b2..7ba1fa4 100644
+index a2018b2..13734f9 100644
 --- a/src/components/views/elements/AccessibleButton.tsx
 +++ b/src/components/views/elements/AccessibleButton.tsx
-@@ -152,6 +152,28 @@ const AccessibleButton = function AccessibleButton<T extends ElementType = typeo
+@@ -152,6 +152,41 @@ const AccessibleButton = function AccessibleButton<T extends ElementType = typeo
          } else {
              newProps.onClick = onClick ?? undefined;
          }
 +
 +        // Fast-tap on mobile: fire onClick immediately on touchend rather than
 +        // waiting for the browser's synthesized click (~100-300ms later).
-+        // We track touchstart position to ignore scrolls/drags (>10px movement).
++        // We track touchstart position to distinguish taps from scrolls (>10px movement).
 +        let touchStartX = 0;
 +        let touchStartY = 0;
 +        newProps.onTouchStart = (e: React.TouchEvent) => {
 +            if (e.touches.length === 1) {
 +                touchStartX = e.touches[0].clientX;
 +                touchStartY = e.touches[0].clientY;
++            }
++        };
++        newProps.onTouchEnd = (e: React.TouchEvent) => {
++            if (e.changedTouches.length === 1) {
++                const dx = e.changedTouches[0].clientX - touchStartX;
++                const dy = e.changedTouches[0].clientY - touchStartY;
++                if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
++                    e.preventDefault(); // suppress the delayed synthesized click
++                    // Blur the element immediately so focus styles don't linger
++                    // after the tap — prevents the "highlight then navigate" flash.
++                    (e.currentTarget as HTMLElement).blur();
++                    onClick?.(e as unknown as ButtonEvent);
++                }
 +            }
 +        };
 +        newProps.onTouchEnd = (e: React.TouchEvent) => {
