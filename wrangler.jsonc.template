@@ -121,9 +121,12 @@
   ],
 
   // Environment variables
-  "vars": {
-    "SERVER_NAME": "{{SERVER_NAME}}",
-    "SERVER_VERSION": "0.1.0"
+ "vars": {
+   "SERVER_NAME": "{{SERVER_NAME}}",
+   "SERVER_VERSION": "0.1.0",
+   // Comma-separated room IDs or aliases to auto-join all new users into on registration.
+   // Leave empty to disable. Example: "!abc:example.com" or "#general:example.com"
+   "AUTO_JOIN_ROOMS": ""
   },
 
   // Secrets — set via `npx wrangler secret put <NAME>` or use setup.sh:

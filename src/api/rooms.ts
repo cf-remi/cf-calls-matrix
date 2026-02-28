@@ -25,6 +25,7 @@ import {
   getEvent,
   notifyUsersOfEvent,
 } from '../services/database';
+import { joinUserToRoom } from '../services/rooms';
 import type { JoinResult } from '../workflows';
 
 const app = new Hono<AppEnv>();
@@ -454,45 +455,7 @@ app.post('/_matrix/client/v3/rooms/:roomId/join', requireAuth(), async (c) => {
     return Errors.forbidden('Cannot join room').toResponse();
   }
 
-  // Create join event
-  const eventId = await generateEventId(c.env.SERVER_NAME);
-
-  // Get current state for auth events
-  const createEvent = await getStateEvent(c.env.DB, roomId, 'm.room.create');
-  const powerLevelsEvent = await getStateEvent(c.env.DB, roomId, 'm.room.power_levels');
-
-  const authEvents: string[] = [];
-  if (createEvent) authEvents.push(createEvent.event_id);
-  if (joinRulesEvent) authEvents.push(joinRulesEvent.event_id);
-  if (powerLevelsEvent) authEvents.push(powerLevelsEvent.event_id);
-  if (currentMembership) authEvents.push(currentMembership.eventId);
-
-  // Get prev events (latest events in room)
-  const { events: latestEvents } = await getRoomEvents(c.env.DB, roomId, undefined, 1);
-  const prevEvents = latestEvents.map(e => e.event_id);
-
-  const memberContent: RoomMemberContent = {
-    membership: 'join',
-  };
-
-  const event: PDU = {
-    event_id: eventId,
-    room_id: roomId,
-    sender: userId,
-    type: 'm.room.member',
-    state_key: userId,
-    content: memberContent,
-    origin_server_ts: Date.now(),
-    depth: (latestEvents[0]?.depth ?? 0) + 1,
-    auth_events: authEvents,
-    prev_events: prevEvents,
-  };
-
-  await storeEvent(c.env.DB, event);
-  await updateMembership(c.env.DB, roomId, userId, 'join', eventId);
-
-  // Notify room members about the join
-  await notifyUsersOfEvent(c.env, roomId, eventId, 'm.room.member');
+  await joinUserToRoom(c.env.DB, c.env, roomId, userId);
 
   return c.json({ room_id: roomId });
 });
@@ -1720,40 +1683,7 @@ app.post('/_matrix/client/v3/join/:roomIdOrAlias', requireAuth(), async (c) => {
     return Errors.forbidden('Cannot join room').toResponse();
   }
 
-  // Create join event
-  const eventId = await generateEventId(c.env.SERVER_NAME);
-
-  const createEvent = await getStateEvent(db, roomId, 'm.room.create');
-  const powerLevelsEvent = await getStateEvent(db, roomId, 'm.room.power_levels');
-
-  const authEvents: string[] = [];
-  if (createEvent) authEvents.push(createEvent.event_id);
-  if (joinRulesEvent) authEvents.push(joinRulesEvent.event_id);
-  if (powerLevelsEvent) authEvents.push(powerLevelsEvent.event_id);
-  if (currentMembership) authEvents.push(currentMembership.eventId);
-
-  const { events: latestEvents } = await getRoomEvents(db, roomId, undefined, 1);
-  const prevEvents = latestEvents.map(e => e.event_id);
-
-  const memberContent: RoomMemberContent = {
-    membership: 'join',
-  };
-
-  const event: PDU = {
-    event_id: eventId,
-    room_id: roomId,
-    sender: userId,
-    type: 'm.room.member',
-    state_key: userId,
-    content: memberContent,
-    origin_server_ts: Date.now(),
-    depth: (latestEvents[0]?.depth ?? 0) + 1,
-    auth_events: authEvents,
-    prev_events: prevEvents,
-  };
-
-  await storeEvent(db, event);
-  await updateMembership(db, roomId, userId, 'join', eventId);
+  await joinUserToRoom(c.env.DB, c.env, roomId, userId);
 
   return c.json({ room_id: roomId });
 });

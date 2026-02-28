@@ -28,6 +28,10 @@ export interface Env {
   SERVER_NAME: string;
   SERVER_VERSION: string;
 
+  // Comma-separated list of room IDs or aliases to auto-join new users into on registration
+  // e.g. "!FSPdgv_CRtz1BpbppygMRWg7:matrix.goodshab.com" or "#general:matrix.goodshab.com"
+  AUTO_JOIN_ROOMS?: string;
+
   // Support contact info (optional)
   ADMIN_CONTACT_EMAIL?: string;
   ADMIN_CONTACT_MXID?: string;

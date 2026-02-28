@@ -22,6 +22,7 @@ import {
   deleteAccessToken,
   deleteAllUserTokens,
 } from '../services/database';
+import { joinUserToRoom } from '../services/rooms';
 import { requireAuth, extractAccessToken } from '../middleware/auth';
 
 const app = new Hono<AppEnv>();
@@ -365,6 +366,18 @@ app.post('/_matrix/client/v3/register', async (c) => {
 
   // Create user
   await createUser(c.env.DB, userId, localpart, passwordHash, isGuest);
+
+  // Auto-join configured rooms (non-blocking — failures don't prevent registration)
+  if (!isGuest && c.env.AUTO_JOIN_ROOMS) {
+    const rooms = c.env.AUTO_JOIN_ROOMS.split(',').map(r => r.trim()).filter(Boolean);
+    for (const room of rooms) {
+      try {
+        await joinUserToRoom(c.env.DB, c.env, room, userId);
+      } catch (err) {
+        console.error(`[auto-join] Failed to join ${userId} to ${room}:`, err);
+      }
+    }
+  }
 
   // Response depends on inhibit_login
   if (inhibit_login) {
