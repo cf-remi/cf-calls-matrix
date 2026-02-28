@@ -37,9 +37,6 @@ app.get('/_matrix/client/v3/login', (c) => {
       {
         type: 'm.login.token',
       },
-      {
-        type: 'm.login.dummy',
-      },
     ],
   });
 });
@@ -115,23 +112,6 @@ app.post('/_matrix/client/v3/login', async (c) => {
     if (!valid) {
       return Errors.forbidden('Invalid username or password').toResponse();
     }
-  } else if (type === 'm.login.dummy') {
-    // m.login.dummy is for UIA flows - requires identifier but no password verification
-    // Per Matrix spec, this "does nothing and never fails" but still needs a user identifier
-    if (!identifier) {
-      return Errors.missingParam('identifier').toResponse();
-    }
-
-    // Parse identifier
-    if (identifier.type === 'm.id.user') {
-      if (identifier.user.startsWith('@')) {
-        userId = identifier.user;
-      } else {
-        userId = formatUserId(identifier.user, c.env.SERVER_NAME);
-      }
-    } else {
-      return Errors.unrecognized('Unknown identifier type').toResponse();
-    }
   } else {
     return Errors.unrecognized('Unknown login type').toResponse();
   }
@@ -156,7 +136,11 @@ app.post('/_matrix/client/v3/login', async (c) => {
   const tokenHash = await hashToken(accessToken);
   const tokenId = await generateOpaqueId(16);
 
-  await createAccessToken(c.env.DB, tokenId, tokenHash, userId, deviceId);
+  // Access token expires in 1 hour (client should use refresh before this)
+  const expiresInMs = 60 * 60 * 1000; // 1 hour
+  const expiresAt = Date.now() + expiresInMs;
+
+  await createAccessToken(c.env.DB, tokenId, tokenHash, userId, deviceId, expiresAt);
 
   // Generate refresh token and store in KV with auto-expiration
   const refreshToken = await generateRefreshToken();
@@ -173,9 +157,6 @@ app.post('/_matrix/client/v3/login', async (c) => {
     }),
     { expirationTtl: 7 * 24 * 60 * 60 } // 7 days
   );
-
-  // Access token expires in 1 hour (client should use refresh before this)
-  const expiresInMs = 60 * 60 * 1000; // 1 hour
 
   return c.json({
     user_id: userId,
@@ -251,7 +232,11 @@ app.post('/_matrix/client/v3/refresh', async (c) => {
   const newTokenHash = await hashToken(newAccessToken);
   const newTokenId = await generateOpaqueId(16);
 
-  await createAccessToken(c.env.DB, newTokenId, newTokenHash, userId, deviceId);
+  // Access token expires in 1 hour
+  const expiresInMs = 60 * 60 * 1000;
+  const expiresAt = Date.now() + expiresInMs;
+
+  await createAccessToken(c.env.DB, newTokenId, newTokenHash, userId, deviceId, expiresAt);
 
   // Generate new refresh token
   const newRefreshToken = await generateRefreshToken();
@@ -268,9 +253,6 @@ app.post('/_matrix/client/v3/refresh', async (c) => {
     }),
     { expirationTtl: 7 * 24 * 60 * 60 } // 7 days
   );
-
-  // Access token expires in 1 hour
-  const expiresInMs = 60 * 60 * 1000;
 
   return c.json({
     access_token: newAccessToken,
@@ -395,7 +377,11 @@ app.post('/_matrix/client/v3/register', async (c) => {
   const tokenHash = await hashToken(accessToken);
   const tokenId = await generateOpaqueId(16);
 
-  await createAccessToken(c.env.DB, tokenId, tokenHash, userId, deviceId);
+  // Access token expires in 1 hour
+  const expiresInMs = 60 * 60 * 1000;
+  const expiresAt = Date.now() + expiresInMs;
+
+  await createAccessToken(c.env.DB, tokenId, tokenHash, userId, deviceId, expiresAt);
 
   // Generate refresh token and store in KV with auto-expiration
   const refreshToken = await generateRefreshToken();
@@ -412,9 +398,6 @@ app.post('/_matrix/client/v3/register', async (c) => {
     }),
     { expirationTtl: 7 * 24 * 60 * 60 } // 7 days
   );
-
-  // Access token expires in 1 hour
-  const expiresInMs = 60 * 60 * 1000;
 
   return c.json({
     user_id: userId,

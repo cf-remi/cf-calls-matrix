@@ -9,6 +9,18 @@ import { validateUrlForPreview } from '../utils/url-validator';
 
 const app = new Hono<AppEnv>();
 
+// Sanitize filename for Content-Disposition header to prevent header injection
+function sanitizeContentDisposition(filename: string): string {
+  // Remove control characters, quotes, backslashes, and null bytes
+  const clean = filename.replace(/[\x00-\x1f\x7f"\\]/g, '_');
+  // RFC 5987 percent-encoding for filename* parameter (safe chars from RFC)
+  const encoded = encodeURIComponent(clean).replace(/['()]/g, (ch) =>
+    '%' + ch.charCodeAt(0).toString(16).toUpperCase()
+  );
+  // Use both filename (ASCII fallback) and filename* (UTF-8) per RFC 6266
+  return `inline; filename="${clean}"; filename*=UTF-8''${encoded}`;
+}
+
 // Maximum upload size (50MB)
 const MAX_UPLOAD_SIZE = 50 * 1024 * 1024;
 
@@ -99,7 +111,7 @@ app.get('/_matrix/media/v3/download/:serverName/:mediaId', async (c) => {
   const headers = new Headers();
   headers.set('Content-Type', metadata?.content_type || 'application/octet-stream');
   if (metadata?.filename) {
-    headers.set('Content-Disposition', `inline; filename="${metadata.filename}"`);
+    headers.set('Content-Disposition', sanitizeContentDisposition(metadata.filename));
   }
   headers.set('Cache-Control', 'public, max-age=31536000, immutable');
 
@@ -130,7 +142,7 @@ app.get('/_matrix/media/v3/download/:serverName/:mediaId/:filename', async (c) =
 
   const headers = new Headers();
   headers.set('Content-Type', metadata?.content_type || 'application/octet-stream');
-  headers.set('Content-Disposition', `inline; filename="${requestedFilename}"`);
+  headers.set('Content-Disposition', sanitizeContentDisposition(requestedFilename));
   headers.set('Cache-Control', 'public, max-age=31536000, immutable');
 
   return new Response(object.body, { headers });
@@ -544,7 +556,7 @@ app.get('/_matrix/client/v1/media/download/:serverName/:mediaId', requireAuth(),
   const headers = new Headers();
   headers.set('Content-Type', metadata?.content_type || 'application/octet-stream');
   if (metadata?.filename) {
-    headers.set('Content-Disposition', `inline; filename="${metadata.filename}"`);
+    headers.set('Content-Disposition', sanitizeContentDisposition(metadata.filename));
   }
   headers.set('Cache-Control', 'public, max-age=31536000, immutable');
 
@@ -572,7 +584,7 @@ app.get('/_matrix/client/v1/media/download/:serverName/:mediaId/:filename', requ
 
   const headers = new Headers();
   headers.set('Content-Type', metadata?.content_type || 'application/octet-stream');
-  headers.set('Content-Disposition', `inline; filename="${requestedFilename}"`);
+  headers.set('Content-Disposition', sanitizeContentDisposition(requestedFilename));
   headers.set('Cache-Control', 'public, max-age=31536000, immutable');
 
   return new Response(object.body, { headers });

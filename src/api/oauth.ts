@@ -442,7 +442,8 @@ app.post('/oauth/token', async (c) => {
     // Create device and access token in database
     await createDevice(c.env.DB, authCode.user_id, deviceId, `OAuth Client (${client.client_name})`);
     const tokenHash = await hashToken(accessToken);
-    await createAccessToken(c.env.DB, tokenId, tokenHash, authCode.user_id, deviceId);
+    const oauthExpiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+    await createAccessToken(c.env.DB, tokenId, tokenHash, authCode.user_id, deviceId, oauthExpiresAt);
 
     // Store refresh token
     const oauthToken: OAuthToken = {
@@ -454,7 +455,7 @@ app.post('/oauth/token', async (c) => {
       device_id: deviceId,
       scope: authCode.scope,
       created_at: Date.now(),
-      expires_at: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+      expires_at: oauthExpiresAt,
     };
 
     await c.env.SESSIONS.put(`oauth_refresh:${newRefreshToken}`, JSON.stringify(oauthToken), {
@@ -497,7 +498,8 @@ app.post('/oauth/token', async (c) => {
 
     // Update access token in database
     const newTokenHash = await hashToken(newAccessToken);
-    await createAccessToken(c.env.DB, newTokenId, newTokenHash, tokenData.user_id, tokenData.device_id);
+    const newOauthExpiresAt = Date.now() + 24 * 60 * 60 * 1000;
+    await createAccessToken(c.env.DB, newTokenId, newTokenHash, tokenData.user_id, tokenData.device_id, newOauthExpiresAt);
 
     // Delete old refresh token and create new one
     await c.env.SESSIONS.delete(`oauth_refresh:${refreshToken}`);
@@ -511,7 +513,7 @@ app.post('/oauth/token', async (c) => {
       device_id: tokenData.device_id,
       scope: tokenData.scope,
       created_at: Date.now(),
-      expires_at: Date.now() + 24 * 60 * 60 * 1000,
+      expires_at: newOauthExpiresAt,
     };
 
     await c.env.SESSIONS.put(`oauth_refresh:${newRefreshToken}`, JSON.stringify(newOauthToken), {

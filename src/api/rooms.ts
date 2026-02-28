@@ -26,6 +26,8 @@ import {
   notifyUsersOfEvent,
 } from '../services/database';
 import { joinUserToRoom } from '../services/rooms';
+import { checkEventAuth } from '../services/event-auth';
+import { checkTransactionIdempotency, storeTransaction } from '../services/transactions';
 import type { JoinResult } from '../workflows';
 
 const app = new Hono<AppEnv>();
@@ -436,6 +438,11 @@ app.post('/_matrix/client/v3/rooms/:roomId/join', requireAuth(), async (c) => {
   // Check current membership
   const currentMembership = await getMembership(c.env.DB, roomId, userId);
 
+  // Check if user is banned
+  if (currentMembership?.membership === 'ban') {
+    return Errors.forbidden('User is banned from this room').toResponse();
+  }
+
   // Check join rules
   const joinRulesEvent = await getStateEvent(c.env.DB, roomId, 'm.room.join_rules');
   const joinRule = (joinRulesEvent?.content as any)?.join_rule || 'invite';
@@ -797,6 +804,13 @@ app.put('/_matrix/client/v3/rooms/:roomId/state/:eventType/', requireAuth(), asy
     prev_events: prevEvents,
   };
 
+  // Check power levels before storing
+  const roomState = await getRoomState(c.env.DB, roomId);
+  const authResult = checkEventAuth(event, roomState);
+  if (!authResult.allowed) {
+    return Errors.forbidden(authResult.error || 'Not authorized to send this state event').toResponse();
+  }
+
   await storeEvent(c.env.DB, event);
 
   // Debug logging for encryption state events
@@ -866,6 +880,12 @@ app.put('/_matrix/client/v3/rooms/:roomId/state/:eventType/:stateKey?', requireA
     state_key: stateKey, content, origin_server_ts: Date.now(),
     depth: (latestEvents[0]?.depth ?? 0) + 1, auth_events: authEvents, prev_events: prevEvents,
   };
+  // Check power levels before storing
+  const roomState = await getRoomState(c.env.DB, roomId);
+  const authResult = checkEventAuth(event, roomState);
+  if (!authResult.allowed) {
+    return Errors.forbidden(authResult.error || 'Not authorized to send this state event').toResponse();
+  }
   await storeEvent(c.env.DB, event);
   if (eventType === 'm.room.encryption') {
     console.log('[encryption] PUT state event received', { roomId, userId, eventId, content });
@@ -1004,6 +1024,12 @@ app.put('/_matrix/client/v3/rooms/:roomId/send/:eventType/:txnId', requireAuth()
   const eventType = c.req.param('eventType');
   const txnId = c.req.param('txnId');
 
+  // Check transaction idempotency — return cached response if this txnId was already processed
+  const txnCheck = await checkTransactionIdempotency(c.env.DB, userId, txnId);
+  if (txnCheck.cached) {
+    return c.json(txnCheck.response);
+  }
+
   // Check membership
   const membership = await getMembership(c.env.DB, roomId, userId);
   if (!membership || membership.membership !== 'join') {
@@ -1043,6 +1069,13 @@ app.put('/_matrix/client/v3/rooms/:roomId/send/:eventType/:txnId', requireAuth()
     prev_events: prevEvents,
   };
 
+  // Check power levels before storing
+  const roomState = await getRoomState(c.env.DB, roomId);
+  const authResult = checkEventAuth(event, roomState);
+  if (!authResult.allowed) {
+    return Errors.forbidden(authResult.error || 'Not authorized to send this event').toResponse();
+  }
+
   await storeEvent(c.env.DB, event);
 
   // Notify all room members that a new message was sent (wakes up long-polling syncs)
@@ -1066,6 +1099,9 @@ app.put('/_matrix/client/v3/rooms/:roomId/send/:eventType/:txnId', requireAuth()
       })
     );
   }
+
+  // Store transaction for idempotency
+  await storeTransaction(c.env.DB, userId, txnId, eventId);
 
   return c.json({ event_id: eventId });
 });
@@ -1415,6 +1451,12 @@ app.put('/_matrix/client/v3/rooms/:roomId/redact/:eventId/:txnId', requireAuth()
   const targetEventId = c.req.param('eventId');
   const txnId = c.req.param('txnId');
 
+  // Check transaction idempotency
+  const txnCheck = await checkTransactionIdempotency(c.env.DB, userId, txnId);
+  if (txnCheck.cached) {
+    return c.json(txnCheck.response);
+  }
+
   // Check membership
   const membership = await getMembership(c.env.DB, roomId, userId);
   if (!membership || membership.membership !== 'join') {
@@ -1488,6 +1530,9 @@ app.put('/_matrix/client/v3/rooms/:roomId/redact/:eventId/:txnId', requireAuth()
 
   // Notify room members about the redaction
   await notifyUsersOfEvent(c.env, roomId, eventId, 'm.room.redaction');
+
+  // Store transaction for idempotency
+  await storeTransaction(c.env.DB, userId, txnId, eventId);
 
   return c.json({ event_id: eventId });
 });
@@ -1664,6 +1709,11 @@ app.post('/_matrix/client/v3/join/:roomIdOrAlias', requireAuth(), async (c) => {
 
   // Check current membership
   const currentMembership = await getMembership(db, roomId, userId);
+
+  // Check if user is banned
+  if (currentMembership?.membership === 'ban') {
+    return Errors.forbidden('User is banned from this room').toResponse();
+  }
 
   // Check join rules
   const joinRulesEvent = await getStateEvent(db, roomId, 'm.room.join_rules');

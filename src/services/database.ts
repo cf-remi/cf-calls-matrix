@@ -178,12 +178,13 @@ export async function createAccessToken(
   tokenId: string,
   tokenHash: string,
   userId: string,
-  deviceId: string | null
+  deviceId: string | null,
+  expiresAt?: number
 ): Promise<void> {
   await db.prepare(
-    `INSERT INTO access_tokens (token_id, token_hash, user_id, device_id, created_at)
-     VALUES (?, ?, ?, ?, ?)`
-  ).bind(tokenId, tokenHash, userId, deviceId, Date.now()).run();
+    `INSERT INTO access_tokens (token_id, token_hash, user_id, device_id, created_at, expires_at)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ).bind(tokenId, tokenHash, userId, deviceId, Date.now(), expiresAt ?? null).run();
 }
 
 export async function getUserByTokenHash(
@@ -191,8 +192,8 @@ export async function getUserByTokenHash(
   tokenHash: string
 ): Promise<{ userId: string; deviceId: string | null } | null> {
   const result = await db.prepare(
-    `SELECT user_id, device_id FROM access_tokens WHERE token_hash = ?`
-  ).bind(tokenHash).first<{ user_id: string; device_id: string | null }>();
+    `SELECT user_id, device_id FROM access_tokens WHERE token_hash = ? AND (expires_at IS NULL OR expires_at > ?)`
+  ).bind(tokenHash, Date.now()).first<{ user_id: string; device_id: string | null }>();
 
   if (!result) return null;
 

@@ -349,7 +349,8 @@ app.get('/auth/oidc/:providerId/callback', async (c) => {
     const accessToken = await generateAccessToken();
     const tokenHash = await hashToken(accessToken);
     const tokenId = await generateOpaqueId(16);
-    await createAccessToken(db, tokenId, tokenHash, userId, deviceId);
+    const oidcExpiresAt = Date.now() + 60 * 60 * 1000; // 1 hour
+    await createAccessToken(db, tokenId, tokenHash, userId, deviceId, oidcExpiresAt);
 
     // Return success page with token (or redirect)
     return c.html(generateSuccessPage(userId, accessToken, deviceId, c.env.SERVER_NAME, stateData.returnTo));
