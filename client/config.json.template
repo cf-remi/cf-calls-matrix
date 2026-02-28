@@ -27,5 +27,10 @@
     },
     "features": {
         "feature_sliding_sync": true
+    },
+    "mobile_builds": {
+        "ios": null,
+        "android": null,
+        "fdroid": null
     }
 }
