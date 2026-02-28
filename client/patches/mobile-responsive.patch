@@ -58,17 +58,18 @@ index 750ab37..11a1b02 100644
 +    }
 +}
 diff --git a/res/css/structures/_MatrixChat.pcss b/res/css/structures/_MatrixChat.pcss
-index 284c411..f7e5b4c 100644
+index 284c411..2ba1de1 100644
 --- a/res/css/structures/_MatrixChat.pcss
 +++ b/res/css/structures/_MatrixChat.pcss
-@@ -49,6 +49,46 @@ Please see LICENSE files in the repository root for full details.
+@@ -49,6 +49,45 @@ Please see LICENSE files in the repository root for full details.
      height: 100%;
  }
  
 +@media (max-width: 768px) {
 +    /* On mobile, show only one panel at a time.
-+     * When a room is open (.mx_RoomView is rendered), hide the left panel.
-+     * When no room is open, hide the room view wrapper.
++     * mx_MatrixChat--lhs-collapsed is set when collapseLhs=true (room is being viewed).
++     * The back button dispatches show_left_panel which sets collapseLhs=false,
++     * removing the class and showing the room list.
 +     */
 +    .mx_MatrixChat {
 +        /* Add safe-area padding for notched phones */
@@ -77,24 +78,22 @@ index 284c411..f7e5b4c 100644
 +        padding-bottom: env(safe-area-inset-bottom);
 +    }
 +
-+    /* Hide left panel when a room is active */
-+    .mx_MatrixChat:has(.mx_RoomView) .mx_LeftPanel_outerWrapper,
-+    .mx_MatrixChat:has(.mx_RoomView) > .mx_ResizeHandle {
++    /* When viewing a room (lhs collapsed): hide left panel, show room full-width */
++    .mx_MatrixChat--lhs-collapsed .mx_LeftPanel_outerWrapper,
++    .mx_MatrixChat--lhs-collapsed > .mx_ResizeHandle {
 +        display: none !important;
 +    }
 +
-+    /* Full-width room view when room is active */
-+    .mx_MatrixChat:has(.mx_RoomView) .mx_RoomView_wrapper {
++    .mx_MatrixChat--lhs-collapsed .mx_RoomView_wrapper {
 +        width: 100%;
 +    }
 +
-+    /* Hide room view wrapper on home/user page (no RoomView present) */
-+    .mx_MatrixChat:not(:has(.mx_RoomView)) .mx_RoomView_wrapper {
++    /* When showing room list (lhs not collapsed): hide room view, show left panel full-width */
++    .mx_MatrixChat:not(.mx_MatrixChat--lhs-collapsed) .mx_RoomView_wrapper {
 +        display: none;
 +    }
 +
-+    /* Full-width left panel when no room is active */
-+    .mx_MatrixChat:not(:has(.mx_RoomView)) .mx_LeftPanel_outerWrapper {
++    .mx_MatrixChat:not(.mx_MatrixChat--lhs-collapsed) .mx_LeftPanel_outerWrapper {
 +        width: 100%;
 +        max-width: 100%;
 +    }
@@ -320,6 +319,18 @@ index 75eeab7..cb76eec 100644
 -        }
      ]
  }
+diff --git a/src/components/structures/LoggedInView.tsx b/src/components/structures/LoggedInView.tsx
+index 70258e1..8427d0c 100644
+--- a/src/components/structures/LoggedInView.tsx
++++ b/src/components/structures/LoggedInView.tsx
+@@ -743,6 +743,7 @@ class LoggedInView extends React.Component<IProps, IState> {
+         const bodyClasses = classNames({
+             "mx_MatrixChat": true,
+             "mx_MatrixChat--with-avatar": this.state.backgroundImage,
++            "mx_MatrixChat--lhs-collapsed": this.props.collapseLhs,
+         });
+ 
+         const useNewRoomList = SettingsStore.getValue("feature_new_room_list");
 diff --git a/src/components/views/rooms/RoomHeader/RoomHeader.tsx b/src/components/views/rooms/RoomHeader/RoomHeader.tsx
 index b6c0086..416f71c 100644
 --- a/src/components/views/rooms/RoomHeader/RoomHeader.tsx

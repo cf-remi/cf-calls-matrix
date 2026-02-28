@@ -137,6 +137,30 @@ app.put('/_matrix/client/v3/sendToDevice/:eventType/:txnId', requireAuth(), asyn
     ON CONFLICT (user_id, txn_id) DO NOTHING
   `).bind(userId, txnId).run();
 
+  // Notify each recipient's SyncDurableObject to wake up long-polling syncs.
+  // Without this, the recipient's /sync or sliding sync long-poll won't see the
+  // to-device message until the poll timeout expires (~25s), causing verification
+  // prompts and key exchange to be severely delayed.
+  const recipientUserIds = new Set(Object.keys(body.messages));
+  for (const recipientUserId of recipientUserIds) {
+    try {
+      const syncDO = c.env.SYNC.get(c.env.SYNC.idFromName(recipientUserId));
+      await syncDO.fetch(new Request('http://internal/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event_id: `to_device_${txnId}_${recipientUserId}`,
+          room_id: '',
+          type: eventType,
+          timestamp: Date.now(),
+        }),
+      }));
+    } catch (error) {
+      // Non-fatal — message is still in D1, will be delivered on next poll
+      console.error(`[to-device] Failed to notify sync for ${recipientUserId}:`, error);
+    }
+  }
+
   return c.json({});
 });
 
