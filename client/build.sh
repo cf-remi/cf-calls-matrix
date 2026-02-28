@@ -28,7 +28,10 @@ done
 
 echo "--> Installing dependencies (pnpm)..."
 corepack enable pnpm 2>/dev/null || true
-pnpm install --frozen-lockfile
+# --ignore-scripts skips the postinstall hook (pnpm-link.ts) which requires
+# a TypeScript loader not available in standard Node and is only needed for
+# local development with symlinked dependencies.
+pnpm install --frozen-lockfile --ignore-scripts
 
 echo "--> Building..."
 pnpm build
