@@ -1,0 +1,367 @@
+diff --git a/res/css/structures/_LeftPanel.pcss b/res/css/structures/_LeftPanel.pcss
+index 45fc6b0..70f8b33 100644
+--- a/res/css/structures/_LeftPanel.pcss
++++ b/res/css/structures/_LeftPanel.pcss
+@@ -211,3 +211,32 @@ Please see LICENSE files in the repository root for full details.
+     /* Important to force the color on ED titlebar until we remove the old room list */
+     background-color: var(--cpd-color-bg-canvas-default) !important;
+ }
++
++@media (max-width: 768px) {
++    .mx_LeftPanel_outerWrapper {
++        max-width: 100%;
++        width: 100%;
++        flex: 1;
++    }
++
++    .mx_LeftPanel_wrapper {
++        width: 100%;
++    }
++
++    /* Always show the room list expanded (ignore collapsed state) */
++    .mx_LeftPanel_wrapper--user {
++        max-width: 100% !important;
++        width: 100% !important;
++    }
++
++    .mx_LeftPanel,
++    .mx_LeftPanel.mx_LeftPanel_minimized {
++        flex-grow: 1;
++        width: 100% !important;
++        min-width: 0 !important;
++    }
++
++    .mx_LeftPanel.mx_LeftPanel_minimized .mx_LeftPanel_roomListContainer {
++        width: 100% !important;
++    }
++}
+diff --git a/res/css/structures/_MainSplit.pcss b/res/css/structures/_MainSplit.pcss
+index 750ab37..11a1b02 100644
+--- a/res/css/structures/_MainSplit.pcss
++++ b/res/css/structures/_MainSplit.pcss
+@@ -30,3 +30,17 @@ Please see LICENSE files in the repository root for full details.
+         opacity: 0.8;
+     }
+ }
++
++@media (max-width: 768px) {
++    .mx_MainSplit > .mx_RightPanel_ResizeWrapper {
++        position: fixed;
++        inset: 0;
++        z-index: 200;
++        width: 100% !important;
++
++        /* Hide the resize handle on mobile */
++        > .mx_ResizeHandle {
++            display: none;
++        }
++    }
++}
+diff --git a/res/css/structures/_MatrixChat.pcss b/res/css/structures/_MatrixChat.pcss
+index 284c411..f7e5b4c 100644
+--- a/res/css/structures/_MatrixChat.pcss
++++ b/res/css/structures/_MatrixChat.pcss
+@@ -49,6 +49,46 @@ Please see LICENSE files in the repository root for full details.
+     height: 100%;
+ }
+ 
++@media (max-width: 768px) {
++    /* On mobile, show only one panel at a time.
++     * When a room is open (.mx_RoomView is rendered), hide the left panel.
++     * When no room is open, hide the room view wrapper.
++     */
++    .mx_MatrixChat {
++        /* Add safe-area padding for notched phones */
++        padding-left: env(safe-area-inset-left);
++        padding-right: env(safe-area-inset-right);
++        padding-bottom: env(safe-area-inset-bottom);
++    }
++
++    /* Hide left panel when a room is active */
++    .mx_MatrixChat:has(.mx_RoomView) .mx_LeftPanel_outerWrapper,
++    .mx_MatrixChat:has(.mx_RoomView) > .mx_ResizeHandle {
++        display: none !important;
++    }
++
++    /* Full-width room view when room is active */
++    .mx_MatrixChat:has(.mx_RoomView) .mx_RoomView_wrapper {
++        width: 100%;
++    }
++
++    /* Hide room view wrapper on home/user page (no RoomView present) */
++    .mx_MatrixChat:not(:has(.mx_RoomView)) .mx_RoomView_wrapper {
++        display: none;
++    }
++
++    /* Full-width left panel when no room is active */
++    .mx_MatrixChat:not(:has(.mx_RoomView)) .mx_LeftPanel_outerWrapper {
++        width: 100%;
++        max-width: 100%;
++    }
++
++    /* Hide the resize handle always on mobile */
++    .mx_MatrixChat > .mx_ResizeHandle {
++        display: none !important;
++    }
++}
++
+ .mx_MatrixChat > .mx_ResizeHandle--horizontal:hover {
+     position: relative;
+ 
+diff --git a/res/css/structures/_RightPanel.pcss b/res/css/structures/_RightPanel.pcss
+index 8c1ed86..548e2da 100644
+--- a/res/css/structures/_RightPanel.pcss
++++ b/res/css/structures/_RightPanel.pcss
+@@ -34,3 +34,13 @@ Please see LICENSE files in the repository root for full details.
+     order: 2;
+     margin: auto;
+ }
++
++@media (max-width: 768px) {
++    .mx_RightPanel {
++        position: fixed !important;
++        inset: 0 !important;
++        width: 100% !important;
++        z-index: 200;
++        border-left: none;
++    }
++}
+diff --git a/res/css/structures/_RoomView.pcss b/res/css/structures/_RoomView.pcss
+index 6a5ceb6..f3947c3 100644
+--- a/res/css/structures/_RoomView.pcss
++++ b/res/css/structures/_RoomView.pcss
+@@ -10,6 +10,21 @@ Please see LICENSE files in the repository root for full details.
+     --RoomView_MessageList-padding: 18px;
+ }
+ 
++@media (max-width: 768px) {
++    :root {
++        --RoomView_MessageList-padding: 8px;
++    }
++
++    .mx_RoomView_statusAreaBox_line {
++        margin-left: 8px;
++    }
++
++    .mx_RoomView .mx_MessageComposer {
++        /* Add safe-area padding at the bottom for notched phones */
++        padding-bottom: calc(0.5em + env(safe-area-inset-bottom));
++    }
++}
++
+ .mx_RoomView_wrapper {
+     display: flex;
+     flex-direction: column;
+diff --git a/res/css/structures/_SpacePanel.pcss b/res/css/structures/_SpacePanel.pcss
+index f541aba..ef06479 100644
+--- a/res/css/structures/_SpacePanel.pcss
++++ b/res/css/structures/_SpacePanel.pcss
+@@ -390,3 +390,9 @@ Please see LICENSE files in the repository root for full details.
+         text-transform: capitalize;
+     }
+ }
++
++@media (max-width: 768px) {
++    .mx_SpacePanel {
++        display: none !important;
++    }
++}
+diff --git a/res/css/structures/_TabbedView.pcss b/res/css/structures/_TabbedView.pcss
+index e02d42b..afbfc48 100644
+--- a/res/css/structures/_TabbedView.pcss
++++ b/res/css/structures/_TabbedView.pcss
+@@ -141,3 +141,29 @@ Please see LICENSE files in the repository root for full details.
+         }
+     }
+ }
++
++@media (max-width: 768px) {
++    .mx_TabbedView_tabsOnLeft {
++        .mx_TabbedView_tabLabels {
++            width: 52px !important;
++            max-width: 52px !important;
++        }
++
++        .mx_TabbedView_tabLabel_text {
++            display: none !important;
++        }
++
++        .mx_TabbedView_tabLabel {
++            padding-inline: 0;
++            justify-content: center;
++
++            svg {
++                margin-right: 0;
++            }
++        }
++
++        .mx_TabbedView_tabPanel {
++            margin-left: 52px !important;
++        }
++    }
++}
+diff --git a/res/css/views/dialogs/_SettingsDialog.pcss b/res/css/views/dialogs/_SettingsDialog.pcss
+index 2b65bff..08019b2 100644
+--- a/res/css/views/dialogs/_SettingsDialog.pcss
++++ b/res/css/views/dialogs/_SettingsDialog.pcss
+@@ -55,3 +55,23 @@ Please see LICENSE files in the repository root for full details.
+         }
+     }
+ }
++
++@media (max-width: 768px) {
++    .mx_UserSettingsDialog,
++    .mx_RoomSettingsDialog,
++    .mx_SpaceSettingsDialog,
++    .mx_SpacePreferencesDialog {
++        width: 100vw !important;
++        height: 100vh !important;
++        max-width: 100% !important;
++        max-height: 100% !important;
++        border-radius: 0 !important;
++        margin: 0 !important;
++
++        .mx_TabbedView .mx_SettingsTab {
++            min-width: 0 !important;
++            padding-right: 16px;
++            padding-bottom: 32px;
++        }
++    }
++}
+diff --git a/res/css/views/rooms/_RoomHeader.pcss b/res/css/views/rooms/_RoomHeader.pcss
+index a42811f..8dcd1c2 100644
+--- a/res/css/views/rooms/_RoomHeader.pcss
++++ b/res/css/views/rooms/_RoomHeader.pcss
+@@ -113,3 +113,39 @@ Please see LICENSE files in the repository root for full details.
+ .mx_RoomHeader .mx_RoomHeader_toggled {
+     fill: var(--cpd-color-icon-accent-primary);
+ }
++
++/* Back button is hidden on desktop, shown on mobile */
++.mx_RoomHeader_backButton {
++    display: none !important;
++}
++
++@media (max-width: 768px) {
++    .mx_RoomHeader {
++        /* Safe-area padding for notched phones */
++        padding-top: env(safe-area-inset-top);
++        height: calc(64px + env(safe-area-inset-top));
++        /* Remove the excessive right padding so buttons fit */
++        padding-right: var(--cpd-space-2x);
++    }
++
++    .mx_RoomHeader_info {
++        /* Reduce the right padding so room name has more space */
++        padding-right: 0 !important;
++    }
++
++    /* Show the back button on mobile */
++    .mx_RoomHeader_backButton {
++        display: flex !important;
++        flex-shrink: 0;
++    }
++
++    /* Remove the fixed min-width on the video call option dropdown */
++    .mx_RoomHeader_videoCallOption {
++        min-width: unset !important;
++    }
++
++    /* Hide threads, notifications and member face pile on mobile to save space */
++    .mx_RoomHeader .mx_FacePile {
++        display: none;
++    }
++}
+diff --git a/res/manifest.json b/res/manifest.json
+index 75eeab7..cb76eec 100644
+--- a/res/manifest.json
++++ b/res/manifest.json
+@@ -2,8 +2,11 @@
+     "name": "Element",
+     "short_name": "Element",
+     "display": "standalone",
+-    "theme_color": "#76CFA6",
++    "theme_color": "#15191E",
++    "background_color": "#15191E",
++    "scope": "/",
+     "start_url": "index.html",
++    "orientation": "any",
+     "icons": [
+         {
+             "src": "/vector-icons/24.png",
+@@ -21,7 +24,7 @@
+             "type": "image/png"
+         },
+         {
+-            "src": "/vector-icons/152png",
++            "src": "/vector-icons/152.png",
+             "sizes": "152x152",
+             "type": "image/png"
+         },
+@@ -40,21 +43,5 @@
+             "sizes": "1024x1024",
+             "type": "image/png"
+         }
+-    ],
+-    "related_applications": [
+-        {
+-            "platform": "play",
+-            "url": "https://play.google.com/store/apps/details?id=im.vector.app",
+-            "id": "im.vector.app"
+-        },
+-        {
+-            "platform": "f-droid",
+-            "url": "https://f-droid.org/repository/browse/?fdid=im.vector.app",
+-            "id": "im.vector.app"
+-        },
+-        {
+-            "platform": "itunes",
+-            "url": "https://apps.apple.com/app/vector/id1083446067"
+-        }
+     ]
+ }
+diff --git a/src/components/views/rooms/RoomHeader/RoomHeader.tsx b/src/components/views/rooms/RoomHeader/RoomHeader.tsx
+index b6c0086..416f71c 100644
+--- a/src/components/views/rooms/RoomHeader/RoomHeader.tsx
++++ b/src/components/views/rooms/RoomHeader/RoomHeader.tsx
+@@ -18,6 +18,7 @@ import NotificationsIcon from "@vector-im/compound-design-tokens/assets/web/icon
+ import VerifiedIcon from "@vector-im/compound-design-tokens/assets/web/icons/verified";
+ import ErrorIcon from "@vector-im/compound-design-tokens/assets/web/icons/error-solid";
+ import PublicIcon from "@vector-im/compound-design-tokens/assets/web/icons/public";
++import ChevronLeftIcon from "@vector-im/compound-design-tokens/assets/web/icons/chevron-left";
+ import { HistoryVisibility, JoinRule, type Room } from "matrix-js-sdk/src/matrix";
+ import { type ViewRoomOpts } from "@matrix-org/react-sdk-module-api/lib/lifecycles/RoomViewLifecycle";
+ import { Flex, Box } from "@element-hq/web-shared-components";
+@@ -455,6 +456,13 @@ export default function RoomHeader({
+         <>
+             <CurrentRightPanelPhaseContextProvider roomId={room.roomId}>
+                 <Flex as="header" align="center" gap="var(--cpd-space-3x)" className="mx_RoomHeader light-panel">
++                    <IconButton
++                        className="mx_RoomHeader_backButton"
++                        aria-label={_t("action|back")}
++                        onClick={() => defaultDispatcher.dispatch({ action: "show_left_panel" })}
++                    >
++                        <ChevronLeftIcon />
++                    </IconButton>
+                     <WithPresenceIndicator room={room} size="8px">
+                         {/* We hide this from the tabIndex list as it is a pointer shortcut and superfluous for a11y */}
+                         {/* Disable on-click actions until the room is created */}
+diff --git a/src/vector/index.html b/src/vector/index.html
+index 15dfcc7..18b00c4 100644
+--- a/src/vector/index.html
++++ b/src/vector/index.html
+@@ -12,10 +12,12 @@
+     <link rel="icon" type="image/png" sizes="24x24" href="<%= require('../../res/vector-icons/24.png') %>">
+     <link rel="icon" type="image/png" sizes="144x144" href="<%= require('../../res/vector-icons/144.png') %>">
+     <link rel="icon" type="image/png" sizes="512x512" href="<%= require('../../res/vector-icons/512.png') %>">
+-    <meta name="viewport" content="width=device-width, initial-scale=1">
++    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
++    <meta name="apple-mobile-web-app-capable" content="yes">
++    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+     <meta name="apple-mobile-web-app-title" content="Element">
+     <meta name="application-name" content="Element">
+-    <meta name="theme-color" content="#ffffff">
++    <meta name="theme-color" content="#15191E">
+     <meta property="og:image" content="<%= og_image_url %>" />
+     <meta http-equiv="Content-Security-Policy" content="
+         default-src 'none';
