@@ -32,8 +32,40 @@ jobs:
 
       - name: Write wrangler.jsonc
         # WRANGLER_JSONC secret is the base64-encoded contents of your real wrangler.jsonc.
-        # Generate it locally: base64 -i wrangler.jsonc | tr -d '\n'
+        # Set manually: base64 -i wrangler.jsonc | tr -d '\n'
+        # Or via Terraform: terraform output -raw wrangler_jsonc_b64
         run: echo "${{ secrets.WRANGLER_JSONC }}" | base64 -d > wrangler.jsonc
+
+      - name: Apply D1 migrations
+        # Runs all pending migrations idempotently (D1 execute is safe to re-run).
+        # Only executes when migrations/ files change (see paths filter above).
+        if: ${{ contains(github.event.head_commit.modified, 'migrations/') || github.event_name == 'workflow_dispatch' }}
+        run: |
+          DB_NAME=$(jq -r '.d1_databases[0].database_name' wrangler.jsonc)
+          MIGRATIONS=(
+            migrations/schema.sql
+            migrations/002_phase1_e2ee.sql
+            migrations/003_account_management.sql
+            migrations/004_reports_and_notices.sql
+            migrations/005_server_config.sql
+            migrations/005_idp_providers.sql
+            migrations/006_query_optimization.sql
+            migrations/007_secure_server_keys.sql
+            migrations/008_federation_transactions.sql
+            migrations/009_reports_extended.sql
+            migrations/010_fix_reports_schema.sql
+            migrations/011_identity_service.sql
+            migrations/012_fts_search.sql
+            migrations/013_remote_device_lists.sql
+            migrations/014_appservice.sql
+            migrations/015_identity_associations.sql
+          )
+          for f in "${MIGRATIONS[@]}"; do
+            echo "Applying $f..."
+            npx wrangler d1 execute "$DB_NAME" --remote --file="$f"
+          done
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
       - name: Deploy
         uses: cloudflare/wrangler-action@v3

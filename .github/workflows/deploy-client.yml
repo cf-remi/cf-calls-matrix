@@ -36,12 +36,14 @@ jobs:
 
       - name: Write client/config.json
         # CLIENT_CONFIG_JSON secret is the base64-encoded contents of client/config.json.
-        # Generate locally: base64 -i client/config.json | tr -d '\n'
+        # Set manually: base64 -i client/config.json | tr -d '\n'
+        # Or via Terraform: terraform output -raw client_config_json_b64
         run: echo "${{ secrets.CLIENT_CONFIG_JSON }}" | base64 -d > client/config.json
 
       - name: Write client/wrangler.toml
         # CLIENT_WRANGLER_TOML secret is the base64-encoded contents of client/wrangler.toml.
-        # Generate locally: base64 -i client/wrangler.toml | tr -d '\n'
+        # Set manually: base64 -i client/wrangler.toml | tr -d '\n'
+        # Or via Terraform: terraform output -raw client_wrangler_toml_b64
         run: echo "${{ secrets.CLIENT_WRANGLER_TOML }}" | base64 -d > client/wrangler.toml
 
       - name: Build Element Web

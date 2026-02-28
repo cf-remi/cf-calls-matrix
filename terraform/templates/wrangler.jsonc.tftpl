@@ -1,0 +1,84 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "${worker_name}",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-11-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "account_id": "${account_id}",
+
+  "observability": {
+    "enabled": true
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "${d1_database_name}",
+      "database_id": "${d1_database_id}"
+    }
+  ],
+
+  "kv_namespaces": [
+    { "binding": "SESSIONS",           "id": "${kv_sessions_id}" },
+    { "binding": "DEVICE_KEYS",        "id": "${kv_device_keys_id}" },
+    { "binding": "CACHE",              "id": "${kv_cache_id}" },
+    { "binding": "CROSS_SIGNING_KEYS", "id": "${kv_cross_signing_keys_id}" },
+    { "binding": "ACCOUNT_DATA",       "id": "${kv_account_data_id}" },
+    { "binding": "ONE_TIME_KEYS",      "id": "${kv_one_time_keys_id}" }
+  ],
+
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "${r2_bucket_name}"
+    }
+  ],
+
+  "durable_objects": {
+    "bindings": [
+      { "name": "ROOMS",      "class_name": "RoomDurableObject" },
+      { "name": "SYNC",       "class_name": "SyncDurableObject" },
+      { "name": "FEDERATION", "class_name": "FederationDurableObject" },
+      { "name": "CALL_ROOMS", "class_name": "CallRoomDurableObject" },
+      { "name": "ADMIN",      "class_name": "AdminDurableObject" },
+      { "name": "USER_KEYS",  "class_name": "UserKeysDurableObject" },
+      { "name": "PUSH",       "class_name": "PushDurableObject" },
+      { "name": "RATE_LIMIT", "class_name": "RateLimitDurableObject" }
+    ]
+  },
+
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["RoomDurableObject", "SyncDurableObject", "FederationDurableObject"] },
+    { "tag": "v2", "new_classes": ["CallRoomDurableObject"] },
+    { "tag": "v3", "new_classes": ["AdminDurableObject"] },
+    { "tag": "v4", "new_classes": ["UserKeysDurableObject"] },
+    { "tag": "v5", "new_classes": ["PushDurableObject"] },
+    { "tag": "v6", "new_classes": ["RateLimitDurableObject"] }
+  ],
+
+  "vars": {
+    "SERVER_NAME": "${server_name}",
+    "SERVER_VERSION": "${server_version}",
+    "AUTO_JOIN_ROOMS": "${auto_join_rooms}"
+  },
+
+  "routes": [
+    {
+      "pattern": "${server_name}",
+      "custom_domain": true
+    }
+  ],
+
+  "workflows": [
+    {
+      "name": "room-join-workflow",
+      "binding": "ROOM_JOIN_WORKFLOW",
+      "class_name": "RoomJoinWorkflow"
+    },
+    {
+      "name": "push-notification-workflow",
+      "binding": "PUSH_NOTIFICATION_WORKFLOW",
+      "class_name": "PushNotificationWorkflow"
+    }
+  ]
+}

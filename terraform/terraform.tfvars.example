@@ -1,0 +1,68 @@
+# ── terraform.tfvars.example ──────────────────────────────────────────────────
+# Copy this file to terraform.tfvars and fill in your values.
+# terraform.tfvars is gitignored — never commit it.
+#
+# Usage:
+#   cp terraform.tfvars.example terraform.tfvars
+#   # Edit terraform.tfvars with your values
+#   terraform init
+#   terraform apply
+
+# ── Authentication ────────────────────────────────────────────────────────────
+# Cloudflare API token with Workers, D1, KV, R2, Calls read/write permissions.
+# Create at: https://dash.cloudflare.com/profile/api-tokens
+cloudflare_api_token = "your-cloudflare-api-token"
+
+# Cloudflare account ID (found in the dashboard URL or right sidebar)
+account_id = "your-cloudflare-account-id"
+
+# ── Naming / Domains ──────────────────────────────────────────────────────────
+# Short prefix for all resource names. Use lowercase alphanumeric + hyphens.
+# Example: "goodshab" → creates "goodshab-matrix" worker, "goodshab-matrix-db" D1, etc.
+worker_prefix = "goodshab"
+
+# Matrix server hostname. Must be a subdomain of a domain already on Cloudflare DNS.
+# WARNING: This is immutable after the first user registers — changing it invalidates all accounts.
+server_name = "matrix.example.com"
+
+# Domain where Element Web is served. Can be the apex (example.com) or a subdomain.
+client_domain = "example.com"
+
+# Brand name shown in the Element Web UI title bar and login page.
+brand = "MyChat"
+
+# ── Server Config ─────────────────────────────────────────────────────────────
+# Comma-separated room IDs or aliases to auto-join all new registrations into.
+# Leave empty to disable. Example: "!abc123:matrix.example.com" or "#general:matrix.example.com"
+auto_join_rooms = ""
+
+# ── Optional Secrets ──────────────────────────────────────────────────────────
+# Leave as empty string "" to skip creating the binding.
+# All sensitive values are stored encrypted in Terraform state.
+
+# Ed25519 federation signing key (base64). If left empty, the server auto-generates
+# one on first request and caches it. Set explicitly to ensure reproducibility.
+# Generate: wrangler secret put SIGNING_KEY (or leave empty)
+signing_key = ""
+
+# LiveKit SFU (optional — for MatrixRTC via LiveKit)
+livekit_api_key    = ""
+livekit_api_secret = ""
+livekit_url        = ""   # e.g. "wss://livekit.example.com"
+
+# Apple Push Notifications (optional — for iOS push notifications)
+apns_key_id      = ""     # Key ID from Apple Developer Portal
+apns_team_id     = ""     # Apple Developer Team ID
+apns_private_key = ""     # Contents of the .p8 private key file (multi-line string)
+apns_environment = "production"   # "production" or "sandbox"
+
+# OIDC client secret encryption key (optional — for SSO)
+# Generate with: openssl rand -base64 32
+oidc_encryption_key = ""
+
+# Email From address (optional — for verification emails)
+email_from = ""   # e.g. "noreply@matrix.example.com"
+
+# Admin contact info (optional — exposed in /.well-known/matrix/support)
+admin_contact_email = ""   # e.g. "admin@example.com"
+admin_contact_mxid  = ""   # e.g. "@admin:matrix.example.com"
