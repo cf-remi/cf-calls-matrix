@@ -23,7 +23,10 @@
     },
     "setting_defaults": {
         "breadcrumbs": true,
-        "Notifications.alwaysShowBadgeCounts": true
+        "Notifications.alwaysShowBadgeCounts": true,
+        "showJoinLeaves": false,
+        "showAvatarChanges": false,
+        "showDisplaynameChanges": false
     },
     "features": {
         "feature_sliding_sync": true

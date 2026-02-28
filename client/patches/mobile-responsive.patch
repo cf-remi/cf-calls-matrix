@@ -58,10 +58,24 @@ index 750ab37..11a1b02 100644
 +    }
 +}
 diff --git a/res/css/structures/_MatrixChat.pcss b/res/css/structures/_MatrixChat.pcss
-index 284c411..2ba1de1 100644
+index 284c411..c920c0a 100644
 --- a/res/css/structures/_MatrixChat.pcss
 +++ b/res/css/structures/_MatrixChat.pcss
-@@ -49,6 +49,45 @@ Please see LICENSE files in the repository root for full details.
+@@ -6,6 +6,13 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
+ Please see LICENSE files in the repository root for full details.
+ */
+ 
++/* Eliminate the 300ms tap delay on mobile browsers.
++ * "manipulation" disables double-tap-to-zoom on interactive elements,
++ * allowing the browser to fire click events immediately on first tap. */
++* {
++    touch-action: manipulation;
++}
++
+ .mx_MatrixChat_splash {
+     position: relative;
+     height: 100%;
+@@ -49,6 +56,45 @@ Please see LICENSE files in the repository root for full details.
      height: 100%;
  }
  
@@ -374,6 +388,22 @@ index b6c0086..416f71c 100644
                      <WithPresenceIndicator room={room} size="8px">
                          {/* We hide this from the tabIndex list as it is a pointer shortcut and superfluous for a11y */}
                          {/* Disable on-click actions until the room is created */}
+diff --git a/src/shouldHideEvent.ts b/src/shouldHideEvent.ts
+index 64a0e1f..e9c27b4 100644
+--- a/src/shouldHideEvent.ts
++++ b/src/shouldHideEvent.ts
+@@ -67,6 +67,11 @@ export default function shouldHideEvent(ev: MatrixEvent, ctx?: IRoomState): bool
+     // Hide replacement events since they update the original tile (if enabled)
+     if (ev.isRelation(RelationType.Replace)) return true;
+ 
++    // Hide widget add/remove/modify timeline entries (im.vector.modular.widgets).
++    // These clutter the chat with "Alice added the Jitsi widget" notices.
++    if (ev.getType() === "im.vector.modular.widgets") return true;
++    if (ev.getType() === "io.element.widgets.layout") return true;
++
+     const eventDiff = memberEventDiff(ev);
+ 
+     if (eventDiff.isMemberEvent) {
 diff --git a/src/vector/index.html b/src/vector/index.html
 index 15dfcc7..18b00c4 100644
 --- a/src/vector/index.html
