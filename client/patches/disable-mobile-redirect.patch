@@ -1,13 +1,11 @@
 diff --git a/src/vector/index.ts b/src/vector/index.ts
-index 2010c95..0be22a1 100644
+index 2010c95..2056f7b 100644
 --- a/src/vector/index.ts
 +++ b/src/vector/index.ts
-@@ -136,25 +136,6 @@ async function start(): Promise<void> {
-         // give rageshake a chance to load/fail, we don't actually assert rageshake loads, we allow it to fail if no IDB
-         await settled(rageshakePromise);
+@@ -138,23 +138,6 @@ async function start(): Promise<void> {
  
--        const fragparts = parseQsFromFragment(window.location);
--
+         const fragparts = parseQsFromFragment(window.location);
+ 
 -        // don't try to redirect to the native apps if we're
 -        // verifying a 3pid (but after we've loaded the config)
 -        // or if the user is following a deep link
