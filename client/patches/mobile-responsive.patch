@@ -58,7 +58,7 @@ index 750ab37..11a1b02 100644
 +    }
 +}
 diff --git a/res/css/structures/_MatrixChat.pcss b/res/css/structures/_MatrixChat.pcss
-index 284c411..c920c0a 100644
+index 284c411..2af4cc1 100644
 --- a/res/css/structures/_MatrixChat.pcss
 +++ b/res/css/structures/_MatrixChat.pcss
 @@ -6,6 +6,13 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
@@ -75,11 +75,23 @@ index 284c411..c920c0a 100644
  .mx_MatrixChat_splash {
      position: relative;
      height: 100%;
-@@ -49,6 +56,45 @@ Please see LICENSE files in the repository root for full details.
+@@ -49,6 +56,99 @@ Please see LICENSE files in the repository root for full details.
      height: 100%;
  }
  
 +@media (max-width: 768px) {
++    /* Lock the page — prevent rubber-band overscroll and background scrolling.
++     * Individual scroll containers (message list, room list) still scroll via
++     * their own overflow settings. */
++    html,
++    body {
++        position: fixed;
++        width: 100%;
++        height: 100%;
++        overflow: hidden;
++        overscroll-behavior: none;
++    }
++
 +    /* On mobile, show only one panel at a time.
 +     * mx_MatrixChat--lhs-collapsed is set when collapseLhs=true (room is being viewed).
 +     * The back button dispatches show_left_panel which sets collapseLhs=false,
@@ -115,6 +127,48 @@ index 284c411..c920c0a 100644
 +    /* Hide the resize handle always on mobile */
 +    .mx_MatrixChat > .mx_ResizeHandle {
 +        display: none !important;
++    }
++
++    /* Prevent text selection on UI chrome — native apps don't let you
++     * accidentally select button labels, room names, or header text. */
++    .mx_MatrixChat,
++    .mx_LeftPanel_outerWrapper,
++    .mx_RoomHeader,
++    .mx_RoomView_statusArea,
++    .mx_MessageComposer_wrapper,
++    .mx_RoomTile,
++    .mx_RoomSublist,
++    .mx_AccessibleButton {
++        -webkit-user-select: none;
++        user-select: none;
++    }
++
++    /* Keep message body and composer input selectable */
++    .mx_EventTile_body,
++    .mx_MTextBody,
++    .mx_BasicMessageComposer_input,
++    [contenteditable="true"] {
++        -webkit-user-select: text;
++        user-select: text;
++    }
++
++    /* Suppress iOS long-press callout ("Copy / Look Up / Share")
++     * on interactive UI elements. */
++    .mx_AccessibleButton,
++    .mx_RoomTile,
++    .mx_RoomHeader,
++    .mx_LeftPanel_outerWrapper {
++        -webkit-touch-callout: none;
++    }
++
++    /* Momentum (inertial) scrolling for scroll containers —
++     * feels like native list scrolling on iOS. */
++    .mx_RoomView_MessageList,
++    .mx_LeftPanel_roomListContainer,
++    .mx_ScrollPanel,
++    .mx_RightPanel,
++    .mx_BaseCard {
++        -webkit-overflow-scrolling: touch;
 +    }
 +}
 +
@@ -438,7 +492,7 @@ index 64a0e1f..e9c27b4 100644
  
      if (eventDiff.isMemberEvent) {
 diff --git a/src/vector/index.html b/src/vector/index.html
-index 15dfcc7..18b00c4 100644
+index 15dfcc7..712e2c7 100644
 --- a/src/vector/index.html
 +++ b/src/vector/index.html
 @@ -12,10 +12,12 @@
@@ -446,7 +500,7 @@ index 15dfcc7..18b00c4 100644
      <link rel="icon" type="image/png" sizes="144x144" href="<%= require('../../res/vector-icons/144.png') %>">
      <link rel="icon" type="image/png" sizes="512x512" href="<%= require('../../res/vector-icons/512.png') %>">
 -    <meta name="viewport" content="width=device-width, initial-scale=1">
-+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
++    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 +    <meta name="apple-mobile-web-app-capable" content="yes">
 +    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
      <meta name="apple-mobile-web-app-title" content="Element">
