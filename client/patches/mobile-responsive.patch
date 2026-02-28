@@ -58,24 +58,27 @@ index 750ab37..11a1b02 100644
 +    }
 +}
 diff --git a/res/css/structures/_MatrixChat.pcss b/res/css/structures/_MatrixChat.pcss
-index 284c411..4e2c10a 100644
+index 284c411..a02fb9c 100644
 --- a/res/css/structures/_MatrixChat.pcss
 +++ b/res/css/structures/_MatrixChat.pcss
-@@ -6,6 +6,13 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
+@@ -6,6 +6,16 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
  Please see LICENSE files in the repository root for full details.
  */
  
 +/* Eliminate the 300ms tap delay on mobile browsers.
 + * "manipulation" disables double-tap-to-zoom on interactive elements,
-+ * allowing the browser to fire click events immediately on first tap. */
++ * allowing the browser to fire click events immediately on first tap.
++ * "-webkit-tap-highlight-color: transparent" removes the native iOS Safari
++ * semi-transparent gray tap highlight that otherwise flashes on every tap. */
 +* {
 +    touch-action: manipulation;
++    -webkit-tap-highlight-color: transparent;
 +}
 +
  .mx_MatrixChat_splash {
      position: relative;
      height: 100%;
-@@ -49,6 +56,107 @@ Please see LICENSE files in the repository root for full details.
+@@ -49,6 +59,107 @@ Please see LICENSE files in the repository root for full details.
      height: 100%;
  }
  

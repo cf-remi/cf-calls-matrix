@@ -748,6 +748,23 @@ app.get('/_matrix/client/v3/rooms/:roomId/state', requireAuth(), async (c) => {
 });
 
 // GET /_matrix/client/v3/rooms/:roomId/state/:eventType/:stateKey? - Get specific state
+// NOTE: Two routes registered — one with trailing slash (empty stateKey) and one with optional param.
+// Hono's optional params do NOT match trailing slash, so the SDK's /state/eventType/ URL would 404
+// without the explicit trailing-slash variant.
+app.get('/_matrix/client/v3/rooms/:roomId/state/:eventType/', requireAuth(), async (c) => {
+  const userId = c.get('userId');
+  const roomId = c.req.param('roomId');
+  const eventType = c.req.param('eventType');
+  const stateKey = '';
+
+  const membership = await getMembership(c.env.DB, roomId, userId);
+  if (!membership || membership.membership !== 'join') {
+    return Errors.forbidden('Not a member of this room').toResponse();
+  }
+  const event = await getStateEvent(c.env.DB, roomId, eventType, stateKey);
+  if (!event) return Errors.notFound('State event not found').toResponse();
+  return c.json(event.content);
+});
 app.get('/_matrix/client/v3/rooms/:roomId/state/:eventType/:stateKey?', requireAuth(), async (c) => {
   const userId = c.get('userId');
   const roomId = c.req.param('roomId');
@@ -769,7 +786,10 @@ app.get('/_matrix/client/v3/rooms/:roomId/state/:eventType/:stateKey?', requireA
 });
 
 // PUT /_matrix/client/v3/rooms/:roomId/state/:eventType/:stateKey? - Set state
-app.put('/_matrix/client/v3/rooms/:roomId/state/:eventType/:stateKey?', requireAuth(), async (c) => {
+// NOTE: Two routes registered — one with trailing slash (empty stateKey) and one with optional param.
+// Hono's optional params do NOT match trailing slash, so the SDK's /state/eventType/ URL would 404
+// without the explicit trailing-slash variant.
+app.put('/_matrix/client/v3/rooms/:roomId/state/:eventType/', requireAuth(), async (c) => {
   const userId = c.get('userId');
   const roomId = c.req.param('roomId');
   const eventType = c.req.param('eventType');
@@ -849,6 +869,52 @@ app.put('/_matrix/client/v3/rooms/:roomId/state/:eventType/:stateKey?', requireA
   // Notify room members about the state change (wakes up long-polling syncs)
   await notifyUsersOfEvent(c.env, roomId, eventId, eventType);
 
+  return c.json({ event_id: eventId });
+});
+app.put('/_matrix/client/v3/rooms/:roomId/state/:eventType/:stateKey?', requireAuth(), async (c) => {
+  const userId = c.get('userId');
+  const roomId = c.req.param('roomId');
+  const eventType = c.req.param('eventType');
+  const stateKey = c.req.param('stateKey') ?? '';
+
+  const membership = await getMembership(c.env.DB, roomId, userId);
+  if (!membership || membership.membership !== 'join') {
+    return Errors.forbidden('Not a member of this room').toResponse();
+  }
+
+  let content: any;
+  try {
+    content = await c.req.json();
+  } catch {
+    return Errors.badJson().toResponse();
+  }
+
+  const eventId = await generateEventId(c.env.SERVER_NAME);
+  const createEvent = await getStateEvent(c.env.DB, roomId, 'm.room.create');
+  const powerLevelsEvent = await getStateEvent(c.env.DB, roomId, 'm.room.power_levels');
+  const authEvents: string[] = [];
+  if (createEvent) authEvents.push(createEvent.event_id);
+  if (powerLevelsEvent) authEvents.push(powerLevelsEvent.event_id);
+  if (membership) authEvents.push(membership.eventId);
+  const { events: latestEvents } = await getRoomEvents(c.env.DB, roomId, undefined, 1);
+  const prevEvents = latestEvents.map(e => e.event_id);
+  const event: PDU = {
+    event_id: eventId, room_id: roomId, sender: userId, type: eventType,
+    state_key: stateKey, content, origin_server_ts: Date.now(),
+    depth: (latestEvents[0]?.depth ?? 0) + 1, auth_events: authEvents, prev_events: prevEvents,
+  };
+  await storeEvent(c.env.DB, event);
+  if (eventType === 'm.room.encryption') {
+    console.log('[encryption] PUT state event received', { roomId, userId, eventId, content });
+  }
+  const CACHED_STATE_TYPES = ['m.room.name', 'm.room.avatar', 'm.room.topic', 'm.room.canonical_alias', 'm.room.member'];
+  if (CACHED_STATE_TYPES.includes(eventType)) {
+    invalidateRoomCache(c.env.CACHE, roomId).catch(() => {});
+  }
+  if (eventType === 'm.room.member') {
+    await updateMembership(c.env.DB, roomId, stateKey, content.membership, eventId, content.displayname, content.avatar_url);
+  }
+  await notifyUsersOfEvent(c.env, roomId, eventId, eventType);
   return c.json({ event_id: eventId });
 });
 

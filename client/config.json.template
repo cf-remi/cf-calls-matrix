@@ -28,9 +28,7 @@
         "showAvatarChanges": false,
         "showDisplaynameChanges": false
     },
-    "features": {
-        "feature_sliding_sync": true
-    },
+    "features": {},
     "mobile_builds": {
         "ios": null,
         "android": null,
