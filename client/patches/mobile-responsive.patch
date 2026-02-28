@@ -331,6 +331,23 @@ index 70258e1..8427d0c 100644
          });
  
          const useNewRoomList = SettingsStore.getValue("feature_new_room_list");
+diff --git a/src/components/structures/MatrixChat.tsx b/src/components/structures/MatrixChat.tsx
+index 4831f9e..33cc706 100644
+--- a/src/components/structures/MatrixChat.tsx
++++ b/src/components/structures/MatrixChat.tsx
+@@ -1098,6 +1098,12 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
+                 this.notifyNewScreen("room/" + presentedId, replaceLast);
+             },
+         );
++
++        // On narrow screens, collapse the left panel when entering a room
++        // so the room view fills the full width (mobile single-panel navigation).
++        if (UIStore.instance.windowWidth < 1000) {
++            dis.dispatch({ action: "hide_left_panel" });
++        }
+     }
+ 
+     private viewSomethingBehindModal(): void {
 diff --git a/src/components/views/rooms/RoomHeader/RoomHeader.tsx b/src/components/views/rooms/RoomHeader/RoomHeader.tsx
 index b6c0086..416f71c 100644
 --- a/src/components/views/rooms/RoomHeader/RoomHeader.tsx
